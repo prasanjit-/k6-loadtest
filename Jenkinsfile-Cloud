@@ -11,16 +11,6 @@ pipeline {
     }
 
     stages {
-        stage('Performance Testing') {
-            steps {
-                echo 'Running K6 performance tests...'
-                //sh 'sudo chmod +x setup_k6.sh'
-                //sh 'sudo ./setup_k6.sh'
-                sh "k6 login cloud --token ${K6_API_TOKEN}"
-                sh "k6 cloud ${SCRIPT}"
-                echo 'Completed Running K6 performance tests!'
-            }
-        }
 
         stage('Post to Slack') {
             steps {
@@ -34,8 +24,25 @@ pipeline {
                                 "type": "section",
                                 "text": {
                                     "type": "mrkdwn",
-                                    "text": "K6 test case has been executed with the following details:\n\n*Script:* ${SCRIPT}\n*Output:* ${OUTPUT_URL}\n*Scenarios:* ${SCENARIOS}"
+                                    "text": "*Performance Tests Triggered* :chart_with_upwards_trend:"
                                 }
+                            },
+                            {
+                                "type": "section",
+                                "fields": [
+                                    {
+                                        "type": "mrkdwn",
+                                        "text": "*Script:*\n${SCRIPT}"
+                                    },
+                                    {
+                                        "type": "mrkdwn",
+                                        "text": "*Live Output:*\n<${OUTPUT_URL}|View Results>"
+                                    },
+                                    {
+                                        "type": "mrkdwn",
+                                        "text": "*Scenarios:*\n${SCENARIOS}"
+                                    }
+                                ]
                             }
                         ]
                     }
@@ -51,5 +58,16 @@ pipeline {
                 echo 'Posted results to Slack!'
             }
         }
+        stage('Performance Testing') {
+            steps {
+                echo 'Running K6 performance tests...'
+                // sh 'sudo chmod +x setup_k6.sh'
+                // sh 'sudo ./setup_k6.sh'
+                sh "k6 login cloud --token ${K6_API_TOKEN}"
+                sh "k6 cloud ${SCRIPT}"
+                echo 'Completed Running K6 performance tests!'
+            }
+        }
+
     }
 }
