@@ -1,1 +1,69 @@
-ccc
+pipeline {
+    agent any
+
+    environment {
+        K6_API_TOKEN = credentials("K6_API_TOKEN")
+        K6_CLOUD_PROJECT_ID = credentials("K6_CLOUD_PROJECT_ID")
+        SCRIPT = 'loadtests/performance-test.js'
+        OUTPUT_URL = credentials("Your_Output_URL2_Credential_ID")
+        SCENARIOS = '(100.00%) 1 scenario, 50 max VUs, 1m30s max duration.'
+        SLACK_TOKEN = credentials("Your_Slack_Credential_ID")
+    }
+
+    stages {
+
+        stage('Post to Slack') {
+            steps {
+                echo 'Posting results to Slack...'
+                script {
+                    def slackMessage = """
+                    {
+                        "channel": "C05JC0ECGTE",
+                        "blocks": [
+                            {
+                                "type": "section",
+                                "text": {
+                                    "type": "mrkdwn",
+                                    "text": "*CPU Stress Test Triggered* :chart_with_upwards_trend:"
+                                }
+                            },
+                            {
+                                "type": "section",
+                                "fields": [
+                                    {
+                                        "type": "mrkdwn",
+                                        "text": "*Live Output:*\n<${OUTPUT_URL}|View Results>"
+                                    },
+                                    {
+                                        "type": "mrkdwn",
+                                        "text": "*Scenarios:*\nX Worker Threads Y% vCPU Load"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                    """
+
+                    sh """
+                    curl -H "Content-type: application/json" \
+                    --data '${slackMessage}' \
+                    -H "Authorization: Bearer ${SLACK_TOKEN}" \
+                    -X POST https://slack.com/api/chat.postMessage
+                    """
+                }
+                echo 'Posted results to Slack!'
+            }
+        }
+        stage('Performance Testing') {
+            steps {
+                echo 'Running K6 performance tests...'
+                // sh 'sudo chmod +x setup_k6.sh'
+                // sh 'sudo ./setup_k6.sh'
+                sh "k6 login cloud --token ${K6_API_TOKEN}"
+                sh "k6 cloud ${SCRIPT}"
+                echo 'Completed Running K6 performance tests!'
+            }
+        }
+
+    }
+}
